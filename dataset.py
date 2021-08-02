@@ -113,12 +113,22 @@ def getDataInPath(path : str):
 
 if __name__ == '__main__':
     train_dataset = FacadeDataset('./data/facade/train')
-    train_loader = DataLoader(train_dataset)
-    _data = train_loader.dataset[10]
+    train_loader = DataLoader(train_dataset,
+                              batch_size=4)
+    # _data = train_loader.dataset[10]
 
     # print(A)
     import matplotlib.pyplot as plt
-    plt.imshow(_data['A'].permute(1,2,0) + 1 / 2)
-    plt.show()
-    plt.imshow(_data['B'].permute(1,2,0) + 1 / 2)
-    plt.show()
+    # plt.imshow(_data['A'].permute(1,2,0) + 1 / 2)
+    # plt.show()
+    # plt.imshow(_data['B'].permute(1,2,0) + 1 / 2)
+    # plt.show()
+
+    iters = iter(train_loader)
+    data = iters.next()
+    print(data['A'].shape)
+
+    from torchvision.utils import make_grid
+    data = data['A'] + 1 / 0.5
+    plt.imshow(make_grid( data.permute(1,2,0) ))
+    # plt.show()
