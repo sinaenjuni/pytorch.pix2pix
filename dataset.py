@@ -1,4 +1,5 @@
 import os
+import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
@@ -126,9 +127,26 @@ if __name__ == '__main__':
 
     iters = iter(train_loader)
     data = iters.next()
-    print(data['A'].shape)
+    dataA = (data['A'] + 1) / 2
 
-    from torchvision.utils import make_grid
-    data = data['A'] + 1 / 0.5
-    plt.imshow(make_grid( data.permute(1,2,0) ))
+    dataB = (data['B'] + 1) / 2
+
+
+
+    #
+    from torchvision.utils import make_grid, save_image
+    # plt.imshow(make_grid(dataA, nrow=1).permute(1, 2, 0))
     # plt.show()
+    #
+    # plt.imshow(make_grid(dataB, nrow=1).permute(1, 2, 0))
+    # plt.show()
+
+    def save_images(path, oriB, oriA, gened):
+        save_path = Path(path)
+        if not save_path.parent.exists():
+            save_path.parent.mkdir()
+        cat_data = torch.cat([oriB, oriA, gened], dim=3)
+        save_image(cat_data, save_path, nrow=1)
+
+    plt.imshow(make_grid(cat_data, nrow=1).permute(1, 2, 0))
+    plt.show()

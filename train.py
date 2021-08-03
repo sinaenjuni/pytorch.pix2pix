@@ -4,12 +4,18 @@ from torch.utils.data import DataLoader
 
 from torch.optim import lr_scheduler
 
+from torchvision.utils import save_image, make_grid
+
 import loss
 from models import UnetGenerator
 from models import NLayerDiscriminator
 
 from dataset import FacadeDataset
 import time
+from pathlib import Path
+
+from torch.backends import cudnn
+cudnn.benchmark = True
 
 SAMPLEPATH = 'samples'
 
@@ -26,6 +32,19 @@ lambda_L1 = 100.0
 
 gpu_ids = 0
 device = torch.device('cuda:{}'.format(gpu_ids)) if gpu_ids else torch.device('cpu')
+
+def denorm(x):
+    out = (x + 1) / 2
+    return out.clamp(0, 1)
+
+def save_images(path, list_tensor):
+    save_path = Path(path)
+    if not save_path.parent.exists():
+        save_path.parent.mkdir()
+    cat_data = torch.cat(list_tensor, dim=3)
+    cat_data = denorm(cat_data.data.cpu())
+    save_image(cat_data, save_path, nrow=1)
+
 
 def lambda_rule(epoch):
     lr_l = 1.0 - max(0, epoch + epoch_count - n_epochs) / float(n_epochs_decay + 1)
@@ -48,12 +67,24 @@ train_loader = DataLoader(train_dataset,
                           shuffle=not serial_batches,
                           num_workers=int(num_threads)
                           )
-_data = train_loader.dataset[10]
+
+
+val_dataset = FacadeDataset('./data/facade/val')
+val_loader = DataLoader(val_dataset,
+                        batch_size=4,
+                        shuffle=False)
+val_iter = iter(val_loader)
+val_data = val_iter.next()
+
+fixed_data = []
+fixed_data.append(val_data["B"])
+fixed_data.append(val_data["A"])
 
 # print(A)
-# import matplotlib.pyplot as plt
-#
-# plt.imshow(_data['A'].permute(1, 2, 0) + 1 / 2)
+import matplotlib.pyplot as plt
+# plt.imshow(val_dataset[1])
+# plt.show()
+# plt.imshow(make_grid(val_data['A'] + 1 / 2).permute(1, 2, 0))
 # plt.show()
 # plt.imshow(_data['B'].permute(1, 2, 0) + 1 / 2)
 # plt.show()
@@ -96,8 +127,9 @@ for epoch in range(epoch_count, n_epochs + n_epochs_decay + 1):  # outer loop fo
     epoch_iter = 0  # the number of training iterations in current epoch, reset to 0 every epoch
 
     update_learning_rate()  # update learning rates in the beginning of every epoch.
-
+    ret_print['eopch'] = epoch
     for i, data in enumerate(train_loader):  # inner loop within one epoch
+        ret_print['iter'] = i
         iter_start_time = time.time()  # timer for computation per iteration
         if total_iters % print_freq == 0:
             t_data = iter_start_time - iter_data_time
@@ -144,4 +176,6 @@ for epoch in range(epoch_count, n_epochs + n_epochs_decay + 1):  # outer loop fo
 
         print(str(ret_print))
 
-
+    with torch.no_grad():
+        fixed_data.append(netG(val_data['B']))
+        save_images(f'./samples/epoch_{epoch}.png', fixed_data)
