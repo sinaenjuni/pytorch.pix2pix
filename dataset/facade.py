@@ -113,7 +113,7 @@ def getDataInPath(path : str):
 
 
 if __name__ == '__main__':
-    train_dataset = FacadeDataset('./data/facade/train')
+    train_dataset = FacadeDataset('../data/facade/train')
     train_loader = DataLoader(train_dataset,
                               batch_size=4)
     # _data = train_loader.dataset[10]

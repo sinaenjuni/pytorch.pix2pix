@@ -1,3 +1,8 @@
+# import os
+# import sys
+# sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+# print()
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -10,12 +15,15 @@ import loss
 from models import UnetGenerator
 from models import NLayerDiscriminator
 
-from dataset import FacadeDataset
+from dataset.facade import FacadeDataset
+
 import time
 from pathlib import Path
 
 from torch.backends import cudnn
 cudnn.benchmark = True
+
+print(torch.cuda.is_available())
 
 SAMPLEPATH = 'samples'
 
@@ -31,7 +39,8 @@ n_epochs_decay = 100
 lambda_L1 = 100.0
 
 gpu_ids = 0
-device = torch.device('cuda:{}'.format(gpu_ids)) if gpu_ids else torch.device('cpu')
+# device = torch.device('cuda:{}'.format(gpu_ids)) if gpu_ids else torch.device('cpu')
+device = torch.device('cuda:{}'.format(gpu_ids))
 
 def denorm(x):
     out = (x + 1) / 2
@@ -77,8 +86,8 @@ val_iter = iter(val_loader)
 val_data = val_iter.next()
 
 fixed_data = []
-fixed_data.append(val_data["B"])
-fixed_data.append(val_data["A"])
+fixed_data.append(val_data["B"].to(device))
+fixed_data.append(val_data["A"].to(device))
 
 # print(A)
 import matplotlib.pyplot as plt
@@ -96,10 +105,10 @@ netG = UnetGenerator(input_nc=3,
                      num_downs=8,
                      ngf=64,
                      norm_layer=nn.BatchNorm2d,
-                     use_dropout=True)
+                     use_dropout=True).to(device)
 print(netG)
 
-netD = NLayerDiscriminator(input_nc=3 + 3, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d)
+netD = NLayerDiscriminator(input_nc=3 + 3, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d).to(device)
 print(netD)
 
 
@@ -120,6 +129,7 @@ total_iters = 0
 print_freq = 100
 direction = 'BtoA'
 ret_print = {}
+
 
 for epoch in range(epoch_count, n_epochs + n_epochs_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
     epoch_start_time = time.time()  # timer for entire epoch
@@ -144,6 +154,9 @@ for epoch in range(epoch_count, n_epochs + n_epochs_decay + 1):  # outer loop fo
 
         fake_B = netG(real_A)
 
+        # for param in netD.parameters():
+        #     param.requires_grad = True
+
         optimizer_D.zero_grad()     # set D's gradients to zero
         fake_AB = torch.cat((real_A, fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
         pred_fake = netD(fake_AB.detach())
@@ -159,6 +172,9 @@ for epoch in range(epoch_count, n_epochs + n_epochs_decay + 1):  # outer loop fo
 
         ret_print['loss_D_fake'] = loss_D_fake.item() * real_A.shape[0]
         ret_print['loss_D_real'] = loss_D_real.item() * real_A.shape[0]
+
+        # for param in netD.parameters():
+        #     param.requires_grad = False
 
         optimizer_G.zero_grad()        # set G's gradients to zero
         fake_AB = torch.cat((real_A, fake_B), 1)
@@ -177,5 +193,5 @@ for epoch in range(epoch_count, n_epochs + n_epochs_decay + 1):  # outer loop fo
         print(str(ret_print))
 
     with torch.no_grad():
-        fixed_data.append(netG(val_data['B']))
-        save_images(f'./samples/epoch_{epoch}.png', fixed_data)
+        fixed_data.append(netG(val_data['B'].to(device)))
+        save_images(f'./samples2/epoch_{epoch}.png', fixed_data)
