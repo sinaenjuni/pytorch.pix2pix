@@ -9,6 +9,9 @@ import random
 from pathlib import Path
 from PIL import Image
 
+def denorm(x):
+    out = (x + 1) / 2
+    return out.clamp(0, 1)
 
 
 class PairedDataRandomHorizontalFlip:
@@ -103,15 +106,18 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
 
-    hico_dataset = VCOCODataset(img_path, seg_path, transforms, paired_transforms)
-    imgs = hico_dataset[1]
+    vcoco_dataset = VCOCODataset(img_path, seg_path, transforms, paired_transforms)
+    vcoco_loader = DataLoader(vcoco_dataset, shuffle=True)
+    iters = iter(vcoco_loader)
+    imgs = iters.next()
+
 
 
     print(imgs['A'].min(), imgs['A'].max())
     print(imgs['B'].min(), imgs['B'].max())
 
-    grid = torch.cat([imgs['A'],imgs['B']], 2)
-    grid = make_grid(grid)
+    grid = torch.cat([imgs['A'],imgs['B']], 3)
+    grid = make_grid(denorm(grid))
 
     plt.imshow(grid.permute(1,2,0))
     plt.show()
