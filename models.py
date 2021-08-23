@@ -127,14 +127,25 @@ class NLayerDiscriminator(nn.Module):
 
         kw = 4
         padw = 1
-        sequence = [nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]
+        sequence = [nn.Conv2d(input_nc,
+                              ndf,
+                              kernel_size=kw,
+                              stride=2,
+                              padding=padw),
+                    nn.LeakyReLU(0.2, True)]
+
         nf_mult = 1
         nf_mult_prev = 1
-        for n in range(1, n_layers):  # gradually increase the number of filters
+        for n in range(1, n_layers):  # gradually increase the number of filters]
             nf_mult_prev = nf_mult
             nf_mult = min(2 ** n, 8)
             sequence += [
-                nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=2, padding=padw, bias=use_bias),
+                nn.Conv2d(ndf * nf_mult_prev,
+                          ndf * nf_mult,
+                          kernel_size=kw,
+                          stride=2,
+                          padding=padw,
+                          bias=use_bias),
                 norm_layer(ndf * nf_mult),
                 nn.LeakyReLU(0.2, True)
             ]
@@ -263,13 +274,25 @@ class Pix2PixModel(nn.Module):
 
 
 if __name__ == '__main__':
-    netG = UnetGenerator(input_nc=3,
-                              output_nc=3,
-                              num_downs=8,
-                              ngf=64,
-                              norm_layer=nn.BatchNorm2d,
-                              use_dropout=True)
-    print(netG)
+    # netG = UnetGenerator(input_nc=3,
+    #                           output_nc=3,
+    #                           num_downs=8,
+    #                           ngf=64,
+    #                           norm_layer=nn.BatchNorm2d,
+    #                           use_dropout=True)
+    # print(netG)
 
     netD = NLayerDiscriminator(input_nc=3 + 3, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d)
     print(netD)
+
+    inputs = torch.randn((1,6,256,256))
+
+
+    layers = []
+    for i in netD.model:
+        layers += [i]
+        if isinstance(i, torch.nn.Conv2d):
+            tmodel = nn.Sequential(*layers)
+            outputs = tmodel(inputs)
+            print(outputs.size())
+
